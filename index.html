@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe</title>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    /* General Styles */
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #ffcccb, #ff69b4, #ff1493);
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Gradient Shapes Animation */
+    body::before,
+    body::after {
+      content: '';
+      position: absolute;
+      width: 200px;
+      height: 200px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      animation: float 10s infinite ease-in-out;
+    }
+
+    body::before {
+      top: 10%;
+      left: 10%;
+      animation-delay: 0s;
+    }
+
+    body::after {
+      bottom: 10%;
+      right: 10%;
+      animation-delay: 5s;
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0) rotate(0);
+      }
+      50% {
+        transform: translateY(-20px) rotate(180deg);
+      }
+    }
+
+    /* Container */
+    .container {
+      text-align: center;
+    }
+
+    /* Screens */
+    .screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Start Button */
+    .circle-btn {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background-color: #ff69b4;
+      color: white;
+      font-size: 24px;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .circle-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Mode and Difficulty Buttons */
+    button {
+      background-color: #ff1493;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #c71585;
+    }
+
+    /* Game Board */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      margin: 20px auto;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: #fff0f5;
+      border: 2px solid #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .cell:hover {
+      background-color: #ffb6c1;
+      transform: scale(1.05);
+    }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+
+    /* Switch Mode Button */
+    #switch-mode-btn {
+      background-color: #c71585;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    #switch-mode-btn:hover {
+      background-color: #ff1493;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen">
+      <button id="start-btn" class="circle-btn">Start</button>
+    </div>
+
+    <!-- Mode Selection Screen -->
+    <div id="mode-screen" class="screen hidden">
+      <h2>Choose Mode</h2>
+      <button id="multiplayer-btn">Multiplayer</button>
+      <button id="ai-btn">Play with AI</button>
+    </div>
+
+    <!-- Difficulty Selection Screen -->
+    <div id="difficulty-screen" class="screen hidden">
+      <h2>Select Difficulty</h2>
+      <button id="easy-btn">Easy</button>
+      <button id="medium-btn">Medium</button>
+      <button id="hard-btn">Hard</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen hidden">
+      <div class="scoreboard">
+        <div>Player: <span id="player-score">0</span></div>
+        <div>Opponent: <span id="opponent-score">0</span></div>
+      </div>
+      <div class="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+      </div>
+      <button id="reset-btn">Reset Game</button>
+      <button id="switch-mode-btn">Switch Mode</button>
+    </div>
+  </div>
+  <script>
+    const startScreen = document.getElementById('start-screen');
+    const modeScreen = document.getElementById('mode-screen');
+    const difficultyScreen = document.getElementById('difficulty-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const startBtn = document.getElementById('start-btn');
+    const multiplayerBtn = document.getElementById('multiplayer-btn');
+    const aiBtn = document.getElementById('ai-btn');
+    const easyBtn = document.getElementById('easy-btn');
+    const mediumBtn = document.getElementById('medium-btn');
+    const hardBtn = document.getElementById('hard-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const switchModeBtn = document.getElementById('switch-mode-btn');
+    const cells = document.querySelectorAll('.cell');
+    const playerScoreDisplay = document.getElementById('player-score');
+    const opponentScoreDisplay = document.getElementById('opponent-score');
+
+    let currentPlayer = 'X';
+    let gameState = ['', '', '', '', '', '', '', '', ''];
+    let gameActive = true;
+    let mode = null;
+    let difficulty = null;
+    let playerScore = 0;
+    let opponentScore = 0;
+
+    // Start Button Animation and Transition
+    startBtn.addEventListener('click', () => {
+      startScreen.classList.add('hidden');
+      modeScreen.classList.remove('hidden');
+    });
+
+    // Mode Selection
+    multiplayerBtn.addEventListener('click', () => {
+      mode = 'multiplayer';
+      modeScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      initializeGame();
+    });
+
+    aiBtn.addEventListener('click', () => {
+      mode = 'ai';
+      modeScreen.classList.add('hidden');
+      difficultyScreen.classList.remove('hidden');
+    });
+
+    // Difficulty Selection
+    easyBtn.addEventListener('click', () => {
+      difficulty = 'easy';
+      difficultyScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      initializeGame();
+    });
+
+    mediumBtn.addEventListener('click', () => {
+      difficulty = 'medium';
+      difficultyScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      initializeGame();
+    });
+
+    hardBtn.addEventListener('click', () => {
+      difficulty = 'hard';
+      difficultyScreen.classList.add('hidden');
+      gameScreen.classList.remove('hidden');
+      initializeGame();
+    });
+
+    // Initialize Game
+    function initializeGame() {
+      gameState = ['', '', '', '', '', '', '', '', ''];
+      gameActive = true;
+      currentPlayer = 'X';
+      cells.forEach(cell => cell.textContent = '');
+    }
+
+    // Handle Cell Clicks
+    cells.forEach(cell => {
+      cell.addEventListener('click', handleCellClick);
+    });
+
+    function handleCellClick(event) {
+      const clickedCell = event.target;
+      const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+      if (gameState[clickedCellIndex] !== '' || !gameActive) return;
+
+      gameState[clickedCellIndex] = currentPlayer;
+      clickedCell.textContent = currentPlayer;
+
+      if (checkWin()) {
+        endGame(false);
+        return;
+      }
+
+      if (checkDraw()) {
+        endGame(true);
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+
+      if (mode === 'ai' && currentPlayer === 'O') {
+        aiMove();
+      }
+    }
+
+    // Check for Win
+    function checkWin() {
+      const winConditions = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+        [0, 4, 8], [2, 4, 6] // Diagonals
+      ];
+
+      return winConditions.some(condition => {
+        return condition.every(index => gameState[index] === currentPlayer);
+      });
+    }
+
+    // Check for Draw
+    function checkDraw() {
+      return gameState.every(cell => cell !== '');
+    }
+
+    // End Game
+    function endGame(draw) {
+      if (draw) {
+        alert('Draw!');
+      } else {
+        alert(`Player ${currentPlayer} wins!`);
+        triggerConfetti(); // Trigger confetti on win
+        if (currentPlayer === 'X') {
+          playerScore++;
+          playerScoreDisplay.textContent = playerScore;
+        } else {
+          opponentScore++;
+          opponentScoreDisplay.textContent = opponentScore;
+        }
+      }
+      gameActive = false;
+    }
+
+    // Confetti Function
+    function triggerConfetti() {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    }
+
+    // AI Move
+    function aiMove() {
+      let move;
+      if (difficulty === 'easy') {
+        move = getRandomMove();
+      } else if (difficulty === 'medium') {
+        move = getMediumMove();
+      } else if (difficulty === 'hard') {
+        move = getHardMove();
+      }
+      gameState[move] = 'O';
+      cells[move].textContent = 'O';
+
+      if (checkWin()) {
+        endGame(false);
+        return;
+      }
+
+      if (checkDraw()) {
+        endGame(true);
+        return;
+      }
+
+      currentPlayer = 'X';
+    }
+
+    // Random Move (Easy)
+    function getRandomMove() {
+      const availableMoves = gameState.map((val, idx) => val === '' ? idx : null).filter(val => val !== null);
+      return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+    }
+
+    // Medium Move (Block or Random)
+    function getMediumMove() {
+      // Check for winning move
+      for (let i = 0; i < gameState.length; i++) {
+        if (gameState[i] === '') {
+          gameState[i] = 'O';
+          if (checkWin()) {
+            gameState[i] = '';
+            return i;
+          }
+          gameState[i] = '';
+        }
+      }
+
+      // Check for blocking move
+      for (let i = 0; i < gameState.length; i++) {
+        if (gameState[i] === '') {
+          gameState[i] = 'X';
+          if (checkWin()) {
+            gameState[i] = '';
+            return i;
+          }
+          gameState[i] = '';
+        }
+      }
+
+      return getRandomMove();
+    }
+
+    // Hard Move (Minimax Algorithm)
+    function getHardMove() {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < gameState.length; i++) {
+        if (gameState[i] === '') {
+          gameState[i] = 'O';
+          let score = minimax(gameState, 0, false);
+          gameState[i] = '';
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      return move;
+    }
+
+    function minimax(board, depth, isMaximizing) {
+      if (checkWin('O')) return 10 - depth;
+      if (checkWin('X')) return depth - 10;
+      if (checkDraw()) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < board.length; i++) {
+          if (board[i] === '') {
+            board[i] = 'O';
+            let score = minimax(board, depth + 1, false);
+            board[i] = '';
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < board.length; i++) {
+          if (board[i] === '') {
+            board[i] = 'X';
+            let score = minimax(board, depth + 1, true);
+            board[i] = '';
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    // Reset Game
+    resetBtn.addEventListener('click', initializeGame);
+
+    // Switch Mode Functionality
+    switchModeBtn.addEventListener('click', () => {
+      gameScreen.classList.add('hidden');
+      modeScreen.classList.remove('hidden');
+      initializeGame();
+    });
+
+    // Add Animation to Cells
+    cells.forEach(cell => {
+      cell.addEventListener('click', () => {
+        if (gameActive) {
+          cell.style.transform = 'scale(0.9)';
+          setTimeout(() => {
+            cell.style.transform = 'scale(1)';
+          }, 200);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
